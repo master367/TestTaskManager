@@ -28,7 +28,7 @@ app = FastAPI(
 
 app.include_router(tasks.router)
 
-# Serve the frontend — same origin means no CORS headaches
+
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
