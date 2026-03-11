@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Task Manager</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #f0f2f5;
+      color: #1a1a2e;
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      max-width: 780px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #2d3a8c;
+      letter-spacing: -0.5px;
+    }
+
+    header p {
+      margin-top: 0.3rem;
+      color: #6b7280;
+      font-size: 0.95rem;
+    }
+
+    /* ── Create Form ── */
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.05);
+    }
+
+    .card h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .form-group {
+      margin-bottom: 0.9rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #4b5563;
+      margin-bottom: 0.35rem;
+    }
+
+    input[type="text"],
+    textarea,
+    select {
+      width: 100%;
+      padding: 0.55rem 0.75rem;
+      border: 1.5px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      color: #111827;
+      background: #fafafa;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      outline: none;
+    }
+
+    input[type="text"]:focus,
+    textarea:focus,
+    select:focus {
+      border-color: #4f46e5;
+      box-shadow: 0 0 0 3px rgba(79,70,229,0.12);
+      background: #fff;
+    }
+
+    textarea { resize: vertical; min-height: 80px; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.6rem 1.4rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    .btn:active { transform: scale(0.97); }
+
+    .btn-primary {
+      background: #4f46e5;
+      color: #fff;
+    }
+
+    .btn-primary:hover { background: #4338ca; }
+
+    .btn-danger {
+      background: #fee2e2;
+      color: #b91c1c;
+      padding: 0.35rem 0.8rem;
+      font-size: 0.82rem;
+    }
+
+    .btn-danger:hover { background: #fecaca; }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      background: #1e293b;
+      color: #fff;
+      padding: 0.7rem 1.2rem;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+      z-index: 999;
+    }
+
+    #toast.show { opacity: 1; }
+
+    /* ── Filters ── */
+    .filters {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin: 1.5rem 0 1rem;
+      flex-wrap: wrap;
+    }
+
+    .filters label {
+      margin: 0;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .filters select { width: auto; }
+
+    /* ── Task List ── */
+    #tasks-list {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .task-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 1.2rem 1.4rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.04);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      grid-template-rows: auto auto auto;
+      gap: 0.4rem 1rem;
+      border-left: 4px solid #e5e7eb;
+      transition: border-color 0.25s, box-shadow 0.2s;
+    }
+
+    .task-card:hover {
+      box-shadow: 0 2px 8px rgba(0,0,0,0.10), 0 6px 20px rgba(0,0,0,0.06);
+    }
+
+    .task-card[data-status="todo"]        { border-left-color: #94a3b8; }
+    .task-card[data-status="in_progress"] { border-left-color: #f59e0b; }
+    .task-card[data-status="done"]        { border-left-color: #22c55e; }
+
+    .task-title {
+      font-weight: 700;
+      font-size: 1rem;
+      color: #111827;
+      grid-column: 1;
+    }
+
+    .task-desc {
+      font-size: 0.88rem;
+      color: #6b7280;
+      grid-column: 1 / -1;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+
+    .task-meta {
+      font-size: 0.78rem;
+      color: #9ca3af;
+      grid-column: 1;
+      align-self: end;
+    }
+
+    .task-actions {
+      grid-column: 2;
+      grid-row: 1 / 4;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .status-select {
+      font-size: 0.8rem;
+      padding: 0.3rem 0.5rem;
+      border-radius: 20px;
+      border: 1.5px solid #d1d5db;
+      background: #f9fafb;
+      cursor: pointer;
+      width: auto;
+    }
+
+    .status-select:focus { border-color: #4f46e5; }
+
+    /* ── Status badge ── */
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.7rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .badge-todo        { background: #f1f5f9; color: #64748b; }
+    .badge-in_progress { background: #fef3c7; color: #b45309; }
+    .badge-done        { background: #dcfce7; color: #15803d; }
+
+    /* ── Empty state ── */
+    .empty {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: #9ca3af;
+    }
+
+    .empty span { font-size: 2.5rem; display: block; margin-bottom: 0.5rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>📋 Task Manager</h1>
+      <p>Simple task tracking interface</p>
+    </header>
+
+    <!-- Create Form -->
+    <div class="card">
+      <h2>Новая задача</h2>
+      <form id="create-form">
+        <div class="form-group">
+          <label for="title">Заголовок *</label>
+          <input type="text" id="title" placeholder="Что нужно сделать?" required />
+        </div>
+        <div class="form-group">
+          <label for="description">Описание</label>
+          <textarea id="description" placeholder="Подробности (необязательно)…"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">＋ Создать задачу</button>
+      </form>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters">
+      <label for="filter-status">Фильтр:</label>
+      <select id="filter-status">
+        <option value="">Все статусы</option>
+        <option value="todo">To Do</option>
+        <option value="in_progress">In Progress</option>
+        <option value="done">Done</option>
+      </select>
+      <label for="filter-sort" style="margin-left:0.5rem;">Сортировка:</label>
+      <select id="filter-sort">
+        <option value="desc">Сначала новые</option>
+        <option value="asc">Сначала старые</option>
+      </select>
+    </div>
+
+    <!-- Tasks -->
+    <div id="tasks-list"></div>
+  </div>
+
+  <!-- Toast notification -->
+  <div id="toast"></div>
+
+  <script>
+    const API = '';  // same origin, empty base URL
+
+    // ── Helpers ─────────────────────────────────────────────────────────
+    function showToast(msg, ms = 2500) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), ms);
+    }
+
+    function formatDate(iso) {
+      const d = new Date(iso);
+      return d.toLocaleString('ru-RU', {
+        day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+    }
+
+    const STATUS_LABEL = {
+      todo: 'To Do',
+      in_progress: 'In Progress',
+      done: 'Done',
+    };
+
+    function badgeClass(status) {
+      return `badge badge-${status}`;
+    }
+
+    // ── Render ───────────────────────────────────────────────────────────
+    function renderTask(task) {
+      const card = document.createElement('div');
+      card.className = 'task-card';
+      card.dataset.id = task.id;
+      card.dataset.status = task.status;
+
+      card.innerHTML = `
+        <div class="task-title">${escHtml(task.title)}</div>
+        <div class="task-actions">
+          <select class="status-select" aria-label="Изменить статус">
+            <option value="todo"        ${task.status === 'todo'        ? 'selected' : ''}>To Do</option>
+            <option value="in_progress" ${task.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
+            <option value="done"        ${task.status === 'done'        ? 'selected' : ''}>Done</option>
+          </select>
+          <button class="btn btn-danger" aria-label="Удалить задачу">🗑 Удалить</button>
+        </div>
+        <div class="task-desc">${task.description ? escHtml(task.description) : '<em style="color:#d1d5db">Без описания</em>'}</div>
+        <div class="task-meta">
+          <span class="${badgeClass(task.status)}">${STATUS_LABEL[task.status]}</span>
+          &nbsp;·&nbsp; создано: ${formatDate(task.created_at)}
+        </div>
+      `;
+
+      // Status change
+      card.querySelector('.status-select').addEventListener('change', async (e) => {
+        await patchTask(task.id, e.target.value, card);
+      });
+
+      // Delete
+      card.querySelector('.btn-danger').addEventListener('click', async () => {
+        await deleteTask(task.id, card);
+      });
+
+      return card;
+    }
+
+    function escHtml(str) {
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    // ── API calls ────────────────────────────────────────────────────────
+    async function loadTasks() {
+      const status = document.getElementById('filter-status').value;
+      const sort   = document.getElementById('filter-sort').value;
+
+      const params = new URLSearchParams({ sort });
+      if (status) params.set('status', status);
+
+      try {
+        const res = await fetch(`${API}/tasks/?${params}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const tasks = await res.json();
+        renderList(tasks);
+      } catch (err) {
+        showToast(`Ошибка загрузки: ${err.message}`);
+      }
+    }
+
+    function renderList(tasks) {
+      const list = document.getElementById('tasks-list');
+      list.innerHTML = '';
+      if (tasks.length === 0) {
+        list.innerHTML = '<div class="empty"><span>🗒️</span>Задач пока нет. Создайте первую!</div>';
+        return;
+      }
+      tasks.forEach(t => list.appendChild(renderTask(t)));
+    }
+
+    async function createTask(title, description) {
+      const body = { title };
+      if (description.trim()) body.description = description.trim();
+
+      const res = await fetch(`${API}/tasks/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || `HTTP ${res.status}`);
+      }
+      return res.json();
+    }
+
+    async function patchTask(id, status, card) {
+      try {
+        const res = await fetch(`${API}/tasks/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const updated = await res.json();
+
+        // update badge and border
+        card.dataset.status = updated.status;
+        const badge = card.querySelector('.badge');
+        badge.className = badgeClass(updated.status);
+        badge.textContent = STATUS_LABEL[updated.status];
+
+        showToast(`Статус обновлён → ${STATUS_LABEL[updated.status]}`);
+      } catch (err) {
+        showToast(`Ошибка обновления: ${err.message}`);
+        // revert select
+        card.querySelector('.status-select').value = card.dataset.status;
+      }
+    }
+
+    async function deleteTask(id, card) {
+      if (!confirm('Удалить задачу?')) return;
+      try {
+        const res = await fetch(`${API}/tasks/${id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        card.style.transition = 'opacity 0.3s, transform 0.3s';
+        card.style.opacity = '0';
+        card.style.transform = 'translateX(20px)';
+        setTimeout(() => card.remove(), 300);
+        showToast('Задача удалена');
+      } catch (err) {
+        showToast(`Ошибка удаления: ${err.message}`);
+      }
+    }
+
+    // ── Form submit ──────────────────────────────────────────────────────
+    document.getElementById('create-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const titleEl = document.getElementById('title');
+      const descEl  = document.getElementById('description');
+      const btn = e.target.querySelector('button[type=submit]');
+
+      btn.disabled = true;
+      btn.textContent = 'Сохранение…';
+
+      try {
+        await createTask(titleEl.value.trim(), descEl.value);
+        titleEl.value = '';
+        descEl.value  = '';
+        showToast('Задача создана ✓');
+        await loadTasks();
+      } catch (err) {
+        showToast(`Ошибка: ${err.message}`);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '＋ Создать задачу';
+      }
+    });
+
+    // ── Filters ──────────────────────────────────────────────────────────
+    document.getElementById('filter-status').addEventListener('change', loadTasks);
+    document.getElementById('filter-sort').addEventListener('change', loadTasks);
+
+    // ── Init ─────────────────────────────────────────────────────────────
+    loadTasks();
+  </script>
+</body>
+</html>
