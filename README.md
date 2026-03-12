@@ -1,8 +1,8 @@
-# Task Manager API & UI
+# Task Manager API & UI (Этап 2)
 
-REST API для управления задачами, построенный на **FastAPI** + **PostgreSQL**, а также минималистичный **Vanilla JS Frontend** для визуализации и тестирования. 
+REST API для управления задачами, построенный на **FastAPI** + **PostgreSQL**, с поддержкой **JWT-аутентификации**, привязкой задач к пользователям и минималистичным **Vanilla JS Frontend**. 
 
-Поддерживает создание, просмотр, обновление и удаление задач с фильтрацией и сортировкой, без проблем с CORS.
+Поддерживает регистрацию, вход, создание, просмотр, обновление и удаление задач. Пользователи могут управлять только своими собственными задачами.
 
 ---
 
@@ -12,17 +12,19 @@ REST API для управления задачами, построенный н
 TestTaskManager/
 ├── app/
 │   ├── __init__.py
+│   ├── auth.py          # Логика JWT, хэширование (bcrypt) и зависимости
 │   ├── config.py        # Настройки приложения (pydantic-settings)
 │   ├── database.py      # Async SQLAlchemy движок и сессии
-│   ├── models.py        # ORM-модель Task
-│   ├── schemas.py       # Pydantic-схемы (Request / Response)
-│   ├── main.py          # Точка входа FastAPI, раздача статики
+│   ├── models.py        # ORM-модели (User, Task)
+│   ├── schemas.py       # Pydantic-схемы (Auth, User, Task)
+│   ├── main.py          # Точка входа FastAPI, подключение роутеров
 │   └── routers/
 │       ├── __init__.py
-│       └── tasks.py     # Все эндпоинты /tasks
+│       ├── auth.py      # Эндпоинты /auth (register, login)
+│       └── tasks.py     # Эндпоинты /tasks (protected)
 ├── static/
-│   └── index.html       # Простой Frontend (HTML/CSS/JS)
-├── .env.example
+│   └── index.html       # Frontend с поддержкой авторизации
+├── .env
 ├── .gitignore
 ├── docker-compose.yml
 ├── Dockerfile
@@ -34,117 +36,85 @@ TestTaskManager/
 
 ## Быстрый старт
 
-### 1. Скопируйте `.env`
+### 1. Настройте `.env`
 
-```bash
-cp .env.example .env
+Создайте файл `.env` в корне проекта (можно скопировать из `.env.example`):
+
+```env
+DATABASE_URL=postgresql+asyncpg://taskuser:taskpassword@db:5432/taskdb
+SECRET_KEY=your_secret_key_here
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
 ```
-
-> Файл `.env` уже содержит корректные значения для запуска через Docker Compose. При необходимости отредактируйте пароли.
 
 ### 2. Запустите через Docker Compose
 
 ```bash
-docker-compose up --build -d
+docker compose up --build -d
 ```
 
-Команда запустит два сервиса:
-
-| Сервис | Описание                           |
-|--------|------------------------------------|
-| `db`   | PostgreSQL 15 на порту 5432        |
-| `api`  | FastAPI-приложение на порту 8000   |
-
-При первом запуске сервис `api` автоматически создаёт таблицы в базе данных через `Base.metadata.create_all`.
+Команда соберет образ и запустит:
+- **db**: PostgreSQL 15.
+- **api**: FastAPI приложение.
 
 ### 3. Откройте Frontend UI
 
-Для визуального тестирования интерфейса без Swagger, перейдите по адресу:
-
+Перейдите по адресу:
 ```
 http://localhost:8000/
 ```
 
-> Встроенный Frontend использует Vanilla JS, взаимодействует с API через `fetch` и позволяет:
-> - Создавать задачи.
-> - Просматривать списки задач (с сортировкой и фильтром по статусу).
-> - Изменять статусы задач (`todo`, `in_progress`, `done`).
-> - Удалять задачи.
-
-### 4. Откройте Swagger UI (API Docs)
-
-```
-http://localhost:8000/docs
-```
-
-Там можно детально изучить и протестировать все REST-эндпоинты прямо из браузера.
+Интерфейс позволяет:
+- **Зарегистрироваться** и **Войти**.
+- Управлять списком **своих** задач.
+- Фильтровать по статусу и сортировать по дате.
 
 ---
 
-## Эндпоинты
+## API Эндпоинты
 
+### Аутентификация (`/auth`)
+| Метод  | URL               | Описание                          |
+|--------|-------------------|-----------------------------------|
+| `POST` | `/auth/register`  | Регистрация нового пользователя   |
+| `POST` | `/auth/login`     | Вход и получение JWT-токена       |
+
+### Задачи (`/tasks`) — Требуют `Authorization: Bearer <token>`
 | Метод    | URL                  | Описание                                  |
 |----------|----------------------|-------------------------------------------|
-| `POST`   | `/tasks/`            | Создать задачу                            |
-| `GET`    | `/tasks/`            | Список задач (фильтр + сортировка)        |
-| `GET`    | `/tasks/{task_id}`   | Получить задачу по ID                     |
-| `PATCH`  | `/tasks/{task_id}`   | Частичное обновление задачи               |
-| `DELETE` | `/tasks/{task_id}`   | Удалить задачу                            |
-
-### Query-параметры для `GET /tasks/`
-
-| Параметр | Тип    | Возможные значения              | По умолчанию |
-|----------|--------|---------------------------------|--------------|
-| `status` | string | `todo`, `in_progress`, `done`   | —            |
-| `sort`   | string | `asc`, `desc`                   | `desc`       |
-
-**Пример:**
-```
-GET /tasks/?status=todo&sort=asc
-```
+| `POST`   | `/tasks/`            | Создать задачу (автопривязка к юзеру)     |
+| `GET`    | `/tasks/`            | Список задач текущего пользователя        |
+| `GET`    | `/tasks/{task_id}`   | Получить свою задачу по ID                |
+| `PATCH`  | `/tasks/{task_id}`   | Частичное обновление своей задачи         |
+| `DELETE` | `/tasks/{task_id}`   | Удалить свою задачу                       |
 
 ---
 
-## Модель Task
+## Технические особенности
 
-| Поле          | Тип      | Описание                                      |
-|---------------|----------|-----------------------------------------------|
-| `id`          | int      | Первичный ключ                                |
-| `title`       | string   | Заголовок задачи (обязательный)               |
-| `description` | string?  | Описание (необязательный)                     |
-| `status`      | enum     | `todo` / `in_progress` / `done`               |
-| `created_at`  | datetime | Дата создания (генерируется автоматически)    |
-| `updated_at`  | datetime | Дата обновления (обновляется автоматически)   |
+- **Безопасность**: Пароли хэшируются с использованием `bcrypt`. JWT токены используются для авторизации.
+- **Валидация**: Строгая проверка входных данных через Pydantic (например, `title` не может быть пустым).
+- **База данных**: Асинхронная работа с PostgreSQL через SQLAlchemy 2.0.
+- **Автоматизация**: Поля `created_at` и `updated_at` управляются на уровне БД/ORM.
 
 ---
 
-## Остановка
+## Остановка и очистка
 
+Остановка:
 ```bash
-docker-compose down
+docker compose down
 ```
 
-Чтобы также удалить данные базы:
-
+Остановка с полным удалением данных базы:
 ```bash
-docker-compose down -v
+docker compose down -v
 ```
 
 ---
 
 ## Технологический стек
 
-### Backend
-- **Python 3.12**
-- **FastAPI 0.115**
-- **SQLAlchemy 2.0** (async) + **asyncpg**
-- **Pydantic v2** + **pydantic-settings**
-- **PostgreSQL 15**
-- **Uvicorn**
-
-### Frontend
-- **HTML5, CSS3, Vanilla JS** (Fetch API)
-- Отдача статики через **FastAPI (`StaticFiles`)**
-
-### Инфраструктура
-- **Docker** / **Docker Compose**
+- **Backend**: Python 3.12, FastAPI, SQLAlchemy (Async), PostgreSQL, JWT (jose), Bcrypt.
+- **Frontend**: HTML5, CSS3, Vanilla JS (Fetch API).
+- **Инфраструктура**: Docker, Docker Compose.

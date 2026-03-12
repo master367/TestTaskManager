@@ -23,6 +23,7 @@
     header {
       text-align: center;
       margin-bottom: 2rem;
+      position: relative;
     }
 
     header h1 {
@@ -38,12 +39,20 @@
       font-size: 0.95rem;
     }
 
-    /* ── Create Form ── */
+    .auth-controls {
+      position: absolute;
+      top: 0;
+      right: 0;
+      font-size: 0.9rem;
+    }
+
+    /* ── Forms ── */
     .card {
       background: #ffffff;
       border-radius: 12px;
       padding: 1.5rem;
       box-shadow: 0 1px 4px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.05);
+      margin-bottom: 2rem;
     }
 
     .card h2 {
@@ -68,6 +77,8 @@
     }
 
     input[type="text"],
+    input[type="email"],
+    input[type="password"],
     textarea,
     select {
       width: 100%;
@@ -82,7 +93,7 @@
       outline: none;
     }
 
-    input[type="text"]:focus,
+    input:focus,
     textarea:focus,
     select:focus {
       border-color: #4f46e5;
@@ -95,6 +106,7 @@
     .btn {
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 0.4rem;
       padding: 0.6rem 1.4rem;
       border: none;
@@ -114,6 +126,13 @@
 
     .btn-primary:hover { background: #4338ca; }
 
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #374151;
+    }
+
+    .btn-secondary:hover { background: #d1d5db; }
+
     .btn-danger {
       background: #fee2e2;
       color: #b91c1c;
@@ -122,6 +141,16 @@
     }
 
     .btn-danger:hover { background: #fecaca; }
+
+    .btn-link {
+      background: none;
+      border: none;
+      color: #4f46e5;
+      cursor: pointer;
+      font-weight: 600;
+      padding: 0;
+    }
+    .btn-link:hover { text-decoration: underline; }
 
     /* ── Toast ── */
     #toast {
@@ -250,49 +279,118 @@
     }
 
     .empty span { font-size: 2.5rem; display: block; margin-bottom: 0.5rem; }
+
+    .hidden { display: none !important; }
+
+    /* ── Auth Forms ── */
+    .auth-container {
+      max-width: 400px;
+      margin: 2rem auto;
+    }
+    .auth-toggle {
+      text-align: center;
+      margin-top: 1rem;
+      font-size: 0.9rem;
+      color: #4b5563;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <header>
       <h1>📋 Task Manager</h1>
-      <p>Simple task tracking interface</p>
+      <p id="header-subtitle">Simple task tracking interface</p>
+      <div id="auth-controls" class="auth-controls hidden">
+        <span id="user-greeting"></span>
+        <button id="btn-logout" class="btn btn-secondary" style="padding: 0.3rem 0.8rem; font-size: 0.8rem; margin-left: 0.5rem;">Выйти</button>
+      </div>
     </header>
 
-    <!-- Create Form -->
-    <div class="card">
-      <h2>Новая задача</h2>
-      <form id="create-form">
-        <div class="form-group">
-          <label for="title">Заголовок *</label>
-          <input type="text" id="title" placeholder="Что нужно сделать?" required />
+    <!-- Auth Forms Container -->
+    <div id="auth-view" class="auth-container">
+      
+      <!-- Login Form -->
+      <div id="login-card" class="card">
+        <h2>Вход</h2>
+        <form id="login-form">
+          <div class="form-group">
+            <label for="login-email">Email</label>
+            <input type="email" id="login-email" required />
+          </div>
+          <div class="form-group">
+            <label for="login-password">Пароль</label>
+            <input type="password" id="login-password" required />
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%;">Войти</button>
+        </form>
+        <div class="auth-toggle">
+          Нет аккаунта? <button class="btn-link" onclick="toggleAuth('register')">Зарегистрироваться</button>
         </div>
-        <div class="form-group">
-          <label for="description">Описание</label>
-          <textarea id="description" placeholder="Подробности (необязательно)…"></textarea>
+      </div>
+
+      <!-- Register Form -->
+      <div id="register-card" class="card hidden">
+        <h2>Регистрация</h2>
+        <form id="register-form">
+          <div class="form-group">
+            <label for="register-name">Имя</label>
+            <input type="text" id="register-name" required />
+          </div>
+          <div class="form-group">
+            <label for="register-email">Email</label>
+            <input type="email" id="register-email" required />
+          </div>
+          <div class="form-group">
+            <label for="register-password">Пароль</label>
+            <input type="password" id="register-password" required minlength="6" />
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%;">Зарегистрироваться</button>
+        </form>
+        <div class="auth-toggle">
+          Уже есть аккаунт? <button class="btn-link" onclick="toggleAuth('login')">Войти</button>
         </div>
-        <button type="submit" class="btn btn-primary">＋ Создать задачу</button>
-      </form>
+      </div>
+
     </div>
 
-    <!-- Filters -->
-    <div class="filters">
-      <label for="filter-status">Фильтр:</label>
-      <select id="filter-status">
-        <option value="">Все статусы</option>
-        <option value="todo">To Do</option>
-        <option value="in_progress">In Progress</option>
-        <option value="done">Done</option>
-      </select>
-      <label for="filter-sort" style="margin-left:0.5rem;">Сортировка:</label>
-      <select id="filter-sort">
-        <option value="desc">Сначала новые</option>
-        <option value="asc">Сначала старые</option>
-      </select>
+    <!-- Main App Container -->
+    <div id="app-view" class="hidden">
+      <!-- Create Form -->
+      <div class="card">
+        <h2>Новая задача</h2>
+        <form id="create-form">
+          <div class="form-group">
+            <label for="title">Заголовок *</label>
+            <input type="text" id="title" placeholder="Что нужно сделать?" required />
+          </div>
+          <div class="form-group">
+            <label for="description">Описание</label>
+            <textarea id="description" placeholder="Подробности (необязательно)…"></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary">＋ Создать задачу</button>
+        </form>
+      </div>
+
+      <!-- Filters -->
+      <div class="filters">
+        <label for="filter-status">Фильтр:</label>
+        <select id="filter-status">
+          <option value="">Все статусы</option>
+          <option value="todo">To Do</option>
+          <option value="in_progress">In Progress</option>
+          <option value="done">Done</option>
+        </select>
+        <label for="filter-sort" style="margin-left:0.5rem;">Сортировка:</label>
+        <select id="filter-sort">
+          <option value="desc">Сначала новые</option>
+          <option value="asc">Сначала старые</option>
+        </select>
+      </div>
+
+      <!-- Tasks -->
+      <div id="tasks-list"></div>
     </div>
 
-    <!-- Tasks -->
-    <div id="tasks-list"></div>
   </div>
 
   <!-- Toast notification -->
@@ -300,6 +398,7 @@
 
   <script>
     const API = '';  // same origin, empty base URL
+    let token = localStorage.getItem('token') || null;
 
     // ── Helpers ─────────────────────────────────────────────────────────
     function showToast(msg, ms = 2500) {
@@ -327,7 +426,118 @@
       return `badge badge-${status}`;
     }
 
-    // ── Render ───────────────────────────────────────────────────────────
+    function getAuthHeaders() {
+      return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      };
+    }
+
+    function handleUnauthorized(err, res) {
+      if (res && res.status === 401) {
+        logout();
+        showToast('Сессия истекла. Пожалуйста, войдите снова.');
+      } else {
+        showToast(`Ошибка: ${err.message || 'Что-то пошло не так'}`);
+      }
+    }
+
+    // ── Auth Logic ───────────────────────────────────────────────────────
+    function toggleAuth(view) {
+      if (view === 'login') {
+        document.getElementById('login-card').classList.remove('hidden');
+        document.getElementById('register-card').classList.add('hidden');
+      } else {
+        document.getElementById('login-card').classList.add('hidden');
+        document.getElementById('register-card').classList.remove('hidden');
+      }
+    }
+
+    function setToken(newToken) {
+      token = newToken;
+      localStorage.setItem('token', token);
+      checkAuth();
+    }
+
+    function logout() {
+      token = null;
+      localStorage.removeItem('token');
+      checkAuth();
+    }
+
+    function checkAuth() {
+      if (token) {
+        document.getElementById('auth-view').classList.add('hidden');
+        document.getElementById('app-view').classList.remove('hidden');
+        document.getElementById('auth-controls').classList.remove('hidden');
+        document.getElementById('header-subtitle').classList.add('hidden');
+        loadTasks();
+      } else {
+        document.getElementById('auth-view').classList.remove('hidden');
+        document.getElementById('app-view').classList.add('hidden');
+        document.getElementById('auth-controls').classList.add('hidden');
+        document.getElementById('header-subtitle').classList.remove('hidden');
+      }
+    }
+
+    document.getElementById('btn-logout').addEventListener('click', logout);
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value;
+      const param = document.getElementById('login-password').value;
+      
+      const formData = new URLSearchParams();
+      formData.append('username', email); // OAuth2PasswordRequestForm expects username
+      formData.append('password', param);
+
+      try {
+        const res = await fetch(`${API}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: formData.toString()
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.detail || `HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        setToken(data.access_token);
+        showToast('Успешный вход!');
+      } catch (err) {
+        showToast(`Ошибка входа: ${err.message}`);
+      }
+    });
+
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('register-name').value;
+      const email = document.getElementById('register-email').value;
+      const password = document.getElementById('register-password').value;
+
+      try {
+        const res = await fetch(`${API}/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, password })
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.detail || `HTTP ${res.status}`);
+        }
+
+        showToast('Успешная регистрация! Теперь вы можете войти.');
+        toggleAuth('login');
+      } catch (err) {
+        showToast(`Ошибка регистрации: ${err.message}`);
+      }
+    });
+
+
+    // ── Render Tasks ─────────────────────────────────────────────────────
     function renderTask(task) {
       const card = document.createElement('div');
       card.className = 'task-card';
@@ -347,7 +557,7 @@
         <div class="task-desc">${task.description ? escHtml(task.description) : '<em style="color:#d1d5db">Без описания</em>'}</div>
         <div class="task-meta">
           <span class="${badgeClass(task.status)}">${STATUS_LABEL[task.status]}</span>
-          &nbsp;·&nbsp; создано: ${formatDate(task.created_at)}
+          &nbsp;·&nbsp; ${formatDate(task.created_at)}
         </div>
       `;
 
@@ -365,11 +575,13 @@
     }
 
     function escHtml(str) {
+      if (!str) return '';
       return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
 
-    // ── API calls ────────────────────────────────────────────────────────
+    // ── API calls (Tasks) ────────────────────────────────────────────────
     async function loadTasks() {
+      if (!token) return;
       const status = document.getElementById('filter-status').value;
       const sort   = document.getElementById('filter-sort').value;
 
@@ -377,8 +589,14 @@
       if (status) params.set('status', status);
 
       try {
-        const res = await fetch(`${API}/tasks/?${params}`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const res = await fetch(`${API}/tasks/?${params}`, {
+          headers: getAuthHeaders()
+        });
+        if (!res.ok) {
+           const err = await res.json().catch(() => ({}));
+           handleUnauthorized(err, res);
+           return;
+        }
         const tasks = await res.json();
         renderList(tasks);
       } catch (err) {
@@ -402,12 +620,13 @@
 
       const res = await fetch(`${API}/tasks/`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(body),
       });
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
+        handleUnauthorized(err, res);
         throw new Error(err.detail || `HTTP ${res.status}`);
       }
       return res.json();
@@ -417,10 +636,14 @@
       try {
         const res = await fetch(`${API}/tasks/${id}`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAuthHeaders(),
           body: JSON.stringify({ status }),
         });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            handleUnauthorized(err, res);
+            throw new Error(err.detail || `HTTP ${res.status}`);
+        }
         const updated = await res.json();
 
         // update badge and border
@@ -431,7 +654,6 @@
 
         showToast(`Статус обновлён → ${STATUS_LABEL[updated.status]}`);
       } catch (err) {
-        showToast(`Ошибка обновления: ${err.message}`);
         // revert select
         card.querySelector('.status-select').value = card.dataset.status;
       }
@@ -440,15 +662,22 @@
     async function deleteTask(id, card) {
       if (!confirm('Удалить задачу?')) return;
       try {
-        const res = await fetch(`${API}/tasks/${id}`, { method: 'DELETE' });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const res = await fetch(`${API}/tasks/${id}`, { 
+          method: 'DELETE',
+          headers: getAuthHeaders() 
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            handleUnauthorized(err, res);
+            throw new Error(err.detail || `HTTP ${res.status}`);
+        }
         card.style.transition = 'opacity 0.3s, transform 0.3s';
         card.style.opacity = '0';
         card.style.transform = 'translateX(20px)';
         setTimeout(() => card.remove(), 300);
         showToast('Задача удалена');
       } catch (err) {
-        showToast(`Ошибка удаления: ${err.message}`);
+         // errors logged from handleUnauthorized inside delete
       }
     }
 
@@ -469,7 +698,7 @@
         showToast('Задача создана ✓');
         await loadTasks();
       } catch (err) {
-        showToast(`Ошибка: ${err.message}`);
+        // handled in createTask
       } finally {
         btn.disabled = false;
         btn.textContent = '＋ Создать задачу';
@@ -481,7 +710,7 @@
     document.getElementById('filter-sort').addEventListener('change', loadTasks);
 
     // ── Init ─────────────────────────────────────────────────────────────
-    loadTasks();
+    checkAuth();
   </script>
 </body>
 </html>

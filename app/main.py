@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.database import Base, engine
 from app.models import Task  # noqa: F401
-from app.routers import tasks
+from app.routers import tasks, auth
 
 STATIC_DIR = Path(__file__).parent.parent / "static"
 
@@ -27,7 +27,7 @@ app = FastAPI(
 )
 
 app.include_router(tasks.router)
-
+app.include_router(auth.router)
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 

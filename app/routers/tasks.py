@@ -6,18 +6,20 @@ from sqlalchemy import asc, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import Task, TaskStatus
+from app.models import Task, TaskStatus, User
 from app.schemas import TaskCreate, TaskResponse, TaskUpdate
+from app.auth import get_current_user
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
 
 
 @router.post("/", response_model=TaskResponse, status_code=status.HTTP_201_CREATED)
-async def create_task(payload: TaskCreate, db: AsyncSession = Depends(get_db)):
+async def create_task(payload: TaskCreate, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     task = Task(
         title=payload.title,
         description=payload.description,
         status=payload.status,
+        user_id=current_user.id,
     )
     db.add(task)
     await db.commit()
@@ -30,8 +32,9 @@ async def list_tasks(
     status_filter: TaskStatus | None = Query(default=None, alias="status"),
     order_by: Literal["asc", "desc"] = Query(default="desc", alias="sort"),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    query = select(Task)
+    query = select(Task).where(Task.user_id == current_user.id)
 
     if status_filter is not None:
         query = query.where(Task.status == status_filter)
@@ -46,8 +49,11 @@ async def list_tasks(
 
 
 @router.get("/{task_id}", response_model=TaskResponse)
-async def get_task(task_id: int, db: AsyncSession = Depends(get_db)):
-    task = await db.get(Task, task_id)
+async def get_task(task_id: int, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    query = select(Task).where(Task.id == task_id, Task.user_id == current_user.id)
+    result = await db.execute(query)
+    task = result.scalar_one_or_none()
+    
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
     return task
@@ -58,16 +64,19 @@ async def update_task(
     task_id: int,
     payload: TaskUpdate,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    task = await db.get(Task, task_id)
+    query = select(Task).where(Task.id == task_id, Task.user_id == current_user.id)
+    result = await db.execute(query)
+    task = result.scalar_one_or_none()
+    
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
 
     update_data = payload.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(task, field, value)
-
-    task.updated_at = datetime.now(timezone.utc)
+    if update_data:
+        for field, value in update_data.items():
+            setattr(task, field, value)
 
     await db.commit()
     await db.refresh(task)
@@ -75,8 +84,11 @@ async def update_task(
 
 
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_task(task_id: int, db: AsyncSession = Depends(get_db)):
-    task = await db.get(Task, task_id)
+async def delete_task(task_id: int, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    query = select(Task).where(Task.id == task_id, Task.user_id == current_user.id)
+    result = await db.execute(query)
+    task = result.scalar_one_or_none()
+    
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
     await db.delete(task)
