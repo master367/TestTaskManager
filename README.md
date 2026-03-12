@@ -42,7 +42,7 @@ TestTaskManager/
 
 ```env
 DATABASE_URL=postgresql+asyncpg://taskuser:taskpassword@db:5432/taskdb
-SECRET_KEY=your_secret_key_here
+SECRET_KEY=secretkey
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 ```
