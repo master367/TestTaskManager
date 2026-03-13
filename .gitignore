@@ -41,6 +41,9 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+tests/
+pytest.ini
+test_results*.txt
 
 # mypy
 .mypy_cache/
