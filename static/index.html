@@ -280,6 +280,21 @@
 
     .empty span { font-size: 2.5rem; display: block; margin-bottom: 0.5rem; }
 
+    /* ── Pagination ── */
+    .pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+
+    .pagination span {
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: #4b5563;
+    }
+
     .hidden { display: none !important; }
 
     /* ── Auth Forms ── */
@@ -389,6 +404,13 @@
 
       <!-- Tasks -->
       <div id="tasks-list"></div>
+
+      <!-- Pagination -->
+      <div id="pagination" class="pagination hidden">
+        <button id="btn-prev" class="btn btn-secondary">← Назад</button>
+        <span id="page-info">Страница 1 из 1</span>
+        <button id="btn-next" class="btn btn-secondary">Вперед →</button>
+      </div>
     </div>
 
   </div>
@@ -399,6 +421,8 @@
   <script>
     const API = '';  // same origin, empty base URL
     let token = localStorage.getItem('token') || null;
+    let currentPage = 1;
+    const itemsPerPage = 5;
 
     // ── Helpers ─────────────────────────────────────────────────────────
     function showToast(msg, ms = 2500) {
@@ -585,7 +609,12 @@
       const status = document.getElementById('filter-status').value;
       const sort   = document.getElementById('filter-sort').value;
 
-      const params = new URLSearchParams({ sort });
+      const offset = (currentPage - 1) * itemsPerPage;
+      const params = new URLSearchParams({ 
+        sort,
+        limit: itemsPerPage,
+        offset: offset
+      });
       if (status) params.set('status', status);
 
       try {
@@ -597,12 +626,46 @@
            handleUnauthorized(err, res);
            return;
         }
-        const tasks = await res.json();
-        renderList(tasks);
+        const data = await res.json();
+        // Since backend pagination returns `{ items, total, limit, offset }`
+        renderList(data.items);
+        renderPagination(data.total);
       } catch (err) {
         showToast(`Ошибка загрузки: ${err.message}`);
       }
     }
+
+    function renderPagination(total) {
+      const pagContainer = document.getElementById('pagination');
+      if (total === 0) {
+        pagContainer.classList.add('hidden');
+        return;
+      }
+      pagContainer.classList.remove('hidden');
+
+      const totalPages = Math.ceil(total / itemsPerPage) || 1;
+      
+      const btnPrev = document.getElementById('btn-prev');
+      const btnNext = document.getElementById('btn-next');
+      const pageInfo = document.getElementById('page-info');
+
+      pageInfo.textContent = `Страница ${currentPage} из ${totalPages}`;
+
+      btnPrev.disabled = currentPage <= 1;
+      btnNext.disabled = currentPage >= totalPages;
+    }
+
+    document.getElementById('btn-prev').addEventListener('click', () => {
+      if (currentPage > 1) {
+        currentPage--;
+        loadTasks();
+      }
+    });
+
+    document.getElementById('btn-next').addEventListener('click', () => {
+      currentPage++;
+      loadTasks();
+    });
 
     function renderList(tasks) {
       const list = document.getElementById('tasks-list');
@@ -696,6 +759,8 @@
         titleEl.value = '';
         descEl.value  = '';
         showToast('Задача создана ✓');
+        // Reset to first page so the user sees the new task (assuming sort: desc)
+        currentPage = 1;
         await loadTasks();
       } catch (err) {
         // handled in createTask
@@ -706,8 +771,12 @@
     });
 
     // ── Filters ──────────────────────────────────────────────────────────
-    document.getElementById('filter-status').addEventListener('change', loadTasks);
-    document.getElementById('filter-sort').addEventListener('change', loadTasks);
+    function onFilterChange() {
+      currentPage = 1;
+      loadTasks();
+    }
+    document.getElementById('filter-status').addEventListener('change', onFilterChange);
+    document.getElementById('filter-sort').addEventListener('change', onFilterChange);
 
     // ── Init ─────────────────────────────────────────────────────────────
     checkAuth();

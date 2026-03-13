@@ -44,6 +44,13 @@ class TaskResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+
+class PaginatedTaskResponse(BaseModel):
+    items: list[TaskResponse]
+    total: int
+    limit: int
+    offset: int
+
 class UserCreate(BaseModel):
     email: NormalizedEmail
     password: Annotated[str, StringConstraints(strip_whitespace=True, min_length=6)]
