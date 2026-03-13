@@ -1,20 +1,36 @@
 from datetime import datetime
+from typing import Annotated, Optional, Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, EmailStr, StringConstraints
+from pydantic.functional_validators import BeforeValidator
 
 from app.models import TaskStatus
 
+def normalize_email(v: Any) -> Any:
+    if isinstance(v, str):
+        v = v.strip().lower()
+        if not v.isascii():
+            raise ValueError("Email must contain only Latin characters (no Cyrillic allowed)")
+        return v
+    return v
+
+NormalizedEmail = Annotated[EmailStr, BeforeValidator(normalize_email)]
+StrippedString = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+
+TaskTitleString = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
+TaskDescriptionString = Annotated[str, StringConstraints(strip_whitespace=True)]
 
 class TaskCreate(BaseModel):
-    title: str = Field(min_length=1)
-    description: str | None = None
+    title: TaskTitleString
+    description: Optional[TaskDescriptionString] = None
     status: TaskStatus = TaskStatus.todo
 
 
 class TaskUpdate(BaseModel):
-    title: str | None = Field(default=None, min_length=1)
-    description: str | None = None
-    status: TaskStatus | None = None
+    title: Optional[TaskTitleString] = None
+    description: Optional[TaskDescriptionString] = None
+    status: Optional[TaskStatus] = None
 
 
 class TaskResponse(BaseModel):
@@ -29,9 +45,10 @@ class TaskResponse(BaseModel):
     updated_at: datetime
 
 class UserCreate(BaseModel):
-    email: str
-    password: str = Field(min_length=6)
-    name: str
+    email: NormalizedEmail
+    password: Annotated[str, StringConstraints(strip_whitespace=True, min_length=6)]
+    name: StrippedString
+
 
 class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)

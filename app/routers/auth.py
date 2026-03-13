@@ -34,7 +34,8 @@ async def register(payload: UserCreate, db: AsyncSession = Depends(get_db)):
 
 @router.post("/login", response_model=Token)
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
-    query = select(User).where(User.email == form_data.username)
+    email_normalized = form_data.username.strip().lower()
+    query = select(User).where(User.email == email_normalized)
     result = await db.execute(query)
     user = result.scalar_one_or_none()
     
