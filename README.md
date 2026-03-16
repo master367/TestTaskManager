@@ -1,4 +1,4 @@
-# Task Manager API & UI (Этап 2)
+# Task Manager API & UI
 
 REST API для управления задачами, построенный на **FastAPI** + **PostgreSQL**, с поддержкой **JWT-аутентификации**, привязкой задач к пользователям и минималистичным **Vanilla JS Frontend**. 
 
