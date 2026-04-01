@@ -38,12 +38,22 @@ ENV/
 Thumbs.db
 
 # Pytest / Coverage
+tests/
+pytest.ini
 .pytest_cache/
 .coverage
 htmlcov/
-tests/
-pytest.ini
 test_results*.txt
+
+# Local tools & Temporary files
+alembic_run.bat
+test_db.py
+*.db
+*.sqlite
+*.sqlite3
+
+# Docker Volumes
+postgres_data/
 
 # mypy
 .mypy_cache/

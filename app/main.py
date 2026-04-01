@@ -5,8 +5,6 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.database import Base, engine
-from app.models import Task  # noqa: F401
 from app.routers import tasks, auth
 
 STATIC_DIR = Path(__file__).parent.parent / "static"
@@ -14,8 +12,6 @@ STATIC_DIR = Path(__file__).parent.parent / "static"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
     yield
 
 
