@@ -15,6 +15,17 @@ services:
       retries: 10
       start_period: 10s
 
+  migrations:
+    build: .
+    env_file:
+      - .env
+    environment:
+      - ALEMBIC_DOCKER=1
+    depends_on:
+      db:
+        condition: service_healthy
+    command: alembic upgrade head
+
   api:
     build: .
     restart: unless-stopped
@@ -23,6 +34,8 @@ services:
     env_file:
       - .env
     depends_on:
+      migrations:
+        condition: service_completed_successfully
       db:
         condition: service_healthy
 
